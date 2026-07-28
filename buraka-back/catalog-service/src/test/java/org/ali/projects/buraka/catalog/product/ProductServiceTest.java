@@ -78,4 +78,49 @@ class ProductServiceTest {
         assertThat(result).contains(product);
         verifyNoInteractions(redisTemplate);
     }
+
+    @Test
+    void applyReviewCreatedUpdatesAverageAndCount() {
+        service = new ProductService(productRepository, redisTemplate, true);
+        Product product = sampleProduct();
+        product.setRatingsAverage(4.0);
+        product.setRatingsQuantity(2);
+        when(productRepository.findById(10L)).thenReturn(java.util.Optional.of(product));
+
+        service.applyReviewCreated(10L, 5);
+
+        assertThat(product.getRatingsQuantity()).isEqualTo(3);
+        assertThat(product.getRatingsAverage()).isCloseTo(13.0 / 3.0, org.assertj.core.data.Offset.offset(0.0001));
+        verify(productRepository).save(product);
+        verify(redisTemplate).delete("product:slug:product-1");
+    }
+
+    @Test
+    void applyReviewDeletedRecomputesAverage() {
+        service = new ProductService(productRepository, redisTemplate, true);
+        Product product = sampleProduct();
+        product.setRatingsAverage(4.0);
+        product.setRatingsQuantity(2);
+        when(productRepository.findById(10L)).thenReturn(java.util.Optional.of(product));
+
+        service.applyReviewDeleted(10L, 3);
+
+        assertThat(product.getRatingsQuantity()).isEqualTo(1);
+        assertThat(product.getRatingsAverage()).isCloseTo(5.0, org.assertj.core.data.Offset.offset(0.0001));
+        verify(redisTemplate).delete("product:slug:product-1");
+    }
+
+    @Test
+    void applyReviewDeletedWithSingleReviewResetsToZero() {
+        service = new ProductService(productRepository, redisTemplate, true);
+        Product product = sampleProduct();
+        product.setRatingsAverage(5.0);
+        product.setRatingsQuantity(1);
+        when(productRepository.findById(10L)).thenReturn(java.util.Optional.of(product));
+
+        service.applyReviewDeleted(10L, 5);
+
+        assertThat(product.getRatingsQuantity()).isZero();
+        assertThat(product.getRatingsAverage()).isZero();
+    }
 }

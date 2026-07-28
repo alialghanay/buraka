@@ -3,6 +3,8 @@ package org.ali.projects.buraka.review.review;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.ali.projects.buraka.review.messaging.ReviewEventPublisher;
+import org.ali.projects.buraka.shared.messaging.ReviewEvent;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -11,9 +13,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
+    private final ReviewEventPublisher eventPublisher;
 
-    public ReviewService(ReviewRepository reviewRepository) {
+    public ReviewService(ReviewRepository reviewRepository, ReviewEventPublisher eventPublisher) {
         this.reviewRepository = reviewRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public List<Review> forProduct(Long productId) {
@@ -23,7 +27,10 @@ public class ReviewService {
     public Review create(long userId, CreateReviewRequest request) {
         Review review = new Review(userId, request.productId(), request.title(),
                 request.rating(), LocalDateTime.now());
-        return reviewRepository.save(review);
+        Review saved = reviewRepository.save(review);
+        eventPublisher.publish(new ReviewEvent(saved.getReviewId(), saved.getProductId(),
+                saved.getRating(), ReviewEvent.Type.CREATED));
+        return saved;
     }
 
     public void delete(long userId, long reviewId) {
@@ -33,5 +40,7 @@ public class ReviewService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "not your review");
         }
         reviewRepository.delete(review);
+        eventPublisher.publish(new ReviewEvent(review.getReviewId(), review.getProductId(),
+                review.getRating(), ReviewEvent.Type.DELETED));
     }
 }

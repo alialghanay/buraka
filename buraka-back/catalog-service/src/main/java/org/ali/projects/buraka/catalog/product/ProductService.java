@@ -45,6 +45,33 @@ public class ProductService {
         return product;
     }
 
+    public void applyReviewCreated(long productId, int rating) {
+        productRepository.findById(productId).ifPresent(product -> {
+            double total = product.getRatingsAverage() * product.getRatingsQuantity() + rating;
+            int count = product.getRatingsQuantity() + 1;
+            product.setRatingsAverage(total / count);
+            product.setRatingsQuantity(count);
+            productRepository.save(product);
+            evict(product.getSlug());
+        });
+    }
+
+    public void applyReviewDeleted(long productId, int rating) {
+        productRepository.findById(productId).ifPresent(product -> {
+            int count = product.getRatingsQuantity();
+            if (count <= 1) {
+                product.setRatingsAverage(0.0);
+                product.setRatingsQuantity(0);
+            } else {
+                double total = product.getRatingsAverage() * count - rating;
+                product.setRatingsQuantity(count - 1);
+                product.setRatingsAverage(total / (count - 1));
+            }
+            productRepository.save(product);
+            evict(product.getSlug());
+        });
+    }
+
     public void evict(String slug) {
         if (cacheEnabled) {
             redisTemplate.delete(key(slug));
