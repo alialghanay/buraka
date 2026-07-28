@@ -1210,8 +1210,11 @@ Expected: ten `OK` lines, zero `BROKEN`.
 
 - [ ] **Step 5: Verify naming consistency across the whole document**
 
-Run: `grep -rhoE '(auth-service|user-service|product-service|cart-service|notification-service|order-service)' buraka-docs/architecture/ | sort | uniq -c`
-Expected: only `order-service` appears (canonical name, any count). If any of the non-canonical variants (`auth-service`, `user-service`, `product-service`, `cart-service`, `notification-service`) appear, edit the offending files to the canonical names from the naming registry and re-run.
+Run:
+```bash
+grep -rhoE '(^|[^a-zA-Z0-9-])(auth-service|user-service|product-service|cart-service|notification-service|order-service)([^a-zA-Z0-9-]|$)' buraka-docs/architecture/ | grep -oE '(auth-service|user-service|product-service|cart-service|notification-service|order-service)' | sort | uniq -c
+```
+Expected: only `order-service` appears (canonical name, any count). If any of the non-canonical variants (`auth-service`, `user-service`, `product-service`, `cart-service`, `notification-service`) appear as standalone tokens, edit the offending files to the canonical names from the naming registry and re-run.
 
 - [ ] **Step 6: Verify Mermaid block balance**
 
