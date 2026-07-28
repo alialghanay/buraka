@@ -146,7 +146,7 @@ flowchart LR
         p1["1.0 Identity &<br/>Profile"]
         p2["2.0 Catalog<br/>Browsing"]
         p3["3.0 Cart, Checkout &<br/>Payment"]
-        p5["5.0 Reviews &<br/>Ratings"]
+        p4["4.0 Reviews &<br/>Ratings"]
         d1[("User Data")]
         d2[("Catalog Data")]
         d3[("Order Data")]
@@ -157,14 +157,14 @@ flowchart LR
     customer -->|"search, filters"| p2
     customer -->|"cart ops, checkout, payment"| p3
     p3 <-->|"redirect / signed callback"| moamalat
-    customer -->|"reviews"| p5
+    customer -->|"reviews"| p4
     admin -->|"catalog management"| p2
 
     p1 <--> d1
     p2 <--> d2
     p3 <--> d3
-    p5 <--> d4
-    p5 -->|"rating events"| p2
+    p4 <--> d4
+    p4 -->|"rating events"| p2
     p3 -->|"stock events"| p2
 ```
 
