@@ -1,0 +1,29 @@
+services:
+  postgres-catalog:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: buraka_catalog_db
+      POSTGRES_USER: buraka
+      POSTGRES_PASSWORD: buraka
+    ports:
+      - "5433:5432"
+
+  postgres-review:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: buraka_review_db
+      POSTGRES_USER: buraka
+      POSTGRES_PASSWORD: buraka
+    ports:
+      - "5434:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
