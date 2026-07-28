@@ -1019,7 +1019,7 @@ Analysis depth follows the project priority: Scalability (deepest) → Availabil
 
 ## 8.3 Performance
 
-**Goals (NFR-PER-01/02):** catalog reads p95 < 300 ms cached / < 800 ms uncached; checkout p95 < 2 s.
+**Goals (NFR-PER-01 and NFR-PER-02):** catalog reads p95 < 300 ms cached / < 800 ms uncached; checkout p95 < 2 s.
 
 - **redis cache-aside** for product lists and details; TTL plus explicit invalidation on stock/rating events (§5.3).
 - **Async off critical path:** stock updates, rating recalculation, and email sending never block the user's request — they ride rabbitmq events.
@@ -1028,7 +1028,7 @@ Analysis depth follows the project priority: Scalability (deepest) → Availabil
 
 ## 8.4 Security
 
-**Goals (NFR-SEC-01/02/03).**
+**Goals (NFR-SEC-01, NFR-SEC-02, and NFR-SEC-03).**
 
 - **Authentication:** RS256-signed JWTs; access 15 min, refresh 30 days with rotation; refresh tokens stored in redis (revocable).
 - **Passwords:** BCrypt hashes only; reset codes short-lived and single-use.
