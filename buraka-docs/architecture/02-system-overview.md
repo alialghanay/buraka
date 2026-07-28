@@ -59,7 +59,7 @@ flowchart LR
 
     guest --> uc1 & uc2 & uc3
     customer --> uc1 & uc2 & uc4 & uc5 & uc6 & uc7 & uc9 & uc10
-    uc7 -.->|includes| uc8
+    uc7 -.->|<<include>>| uc8
     admin --> uc11
 ```
 

@@ -14,6 +14,8 @@ Each component below is described by its responsibility, the data it owns, its R
 | /api/cart/**, /api/orders/**, /api/payments/** | order-service |
 | /api/reviews/** | review-service |
 
+The route `/api/payments/moamalat/callback` is exempt from JWT validation because Moamalat's server-to-server callbacks carry an HMAC-SHA256 signature instead; the gateway still applies rate limiting and forwards the raw request to order-service for signature verification.
+
 - **Depends on:** all four services (routing), auth-user-service (JWT public key).
 
 ## 5.2 Auth/User Service (`auth-user-service`)
@@ -72,8 +74,10 @@ Each component below is described by its responsibility, the data it owns, its R
 | GET /api/orders | Order history (FR-ORD-07) |
 | GET /api/orders/{id} | Order detail (FR-ORD-07) |
 | POST /api/payments/moamalat/callback | Moamalat server callback (HMAC-SHA256 verified) — public, unauthenticated, signature-checked |
+| GET /api/orders?productId={id}&paid=true (internal) | Purchase verification for review eligibility |
 
 - **Publishes:** OrderPlaced, PaymentConfirmed, PaymentFailed, OrderCancelled. **Consumes:** PaymentConfirmed (notification module → order confirmation email).
+- **Note:** shipping-address management is out of scope for this architecture document (the `ORDER.shippingAddressId` field exists in the ERD but is not modeled as a service responsibility).
 - **Depends on:** buraka_order_db, rabbitmq, catalog-service (checkout snapshot), Moamalat, SMTP provider.
 
 ## 5.5 Review Service (`review-service`)

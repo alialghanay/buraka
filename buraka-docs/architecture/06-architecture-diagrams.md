@@ -145,8 +145,7 @@ flowchart LR
     subgraph system["Buraka System"]
         p1["1.0 Identity &<br/>Profile"]
         p2["2.0 Catalog<br/>Browsing"]
-        p3["3.0 Cart &<br/>Checkout"]
-        p4["4.0 Payment<br/>Processing"]
+        p3["3.0 Cart, Checkout &<br/>Payment"]
         p5["5.0 Reviews &<br/>Ratings"]
         d1[("User Data")]
         d2[("Catalog Data")]
@@ -156,17 +155,17 @@ flowchart LR
 
     customer -->|"credentials, profile"| p1
     customer -->|"search, filters"| p2
-    customer -->|"cart ops, checkout"| p3
-    p3 -->|"order + payment request"| p4
-    p4 <-->|"redirect / signed callback"| moamalat
+    customer -->|"cart ops, checkout, payment"| p3
+    p3 <-->|"redirect / signed callback"| moamalat
     customer -->|"reviews"| p5
     admin -->|"catalog management"| p2
 
     p1 <--> d1
     p2 <--> d2
     p3 <--> d3
-    p4 --> d3
     p5 <--> d4
     p5 -->|"rating events"| p2
-    p4 -->|"stock events"| p2
+    p3 -->|"stock events"| p2
 ```
+
+Level-0 DFD showing logical processes aligned with the microservice decomposition; payment coordination is part of order-service.
