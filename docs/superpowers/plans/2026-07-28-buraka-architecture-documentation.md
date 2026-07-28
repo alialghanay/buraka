@@ -161,7 +161,7 @@ This document follows the course report template: Introduction, System Overview,
 
 - [ ] **Step 4: Verify file structure**
 
-Run: `ls buraka-docs/architecture/ && grep -c 'md)(' buraka-docs/architecture/README.md`
+Run: `ls buraka-docs/architecture/ && grep -c 'md](' buraka-docs/architecture/README.md`
 Expected: lists `01-introduction.md` and `README.md`; grep prints at least `12` (10 section links + 2 reference links).
 
 - [ ] **Step 5: Commit**
@@ -353,7 +353,7 @@ Create `buraka-docs/architecture/03-requirements.md` with exactly this content:
 - [ ] **Step 2: Verify requirement ID coverage**
 
 Run: `grep -oE '(FR|NFR)-[A-Z]+-[0-9]+' buraka-docs/architecture/03-requirements.md | sort -u | wc -l`
-Expected: `31` (7 auth + 6 catalog + 7 order + 3 review = 23 FR; 9 NFR minus… verify actual count matches table rows: 23 FR + 9 NFR = 32; accept 31–33, investigate otherwise).
+Expected: `31` (6 auth + 6 catalog + 7 order + 3 review = 22 FR + 9 NFR = 31).
 
 - [ ] **Step 3: Commit**
 
@@ -935,7 +935,7 @@ flowchart TB
     au & or_ --> smtp
 ```
 
-Key physical decisions: every service runs ≥2 replicas behind a Kubernetes Service (NFR-AVL-01); HPA scales any service independently to 10 replicas (NFR-SCA-01); PostgreSQL instances are separate StatefulSets so a busy database never neighbors a failing one; secrets (DB credentials, Moamalat HMAC key, JWT keys) live in Kubernetes Secrets, never in images.
+Key physical decisions: every service runs ≥2 replicas behind a Kubernetes Service, supporting the 99.5% availability target (NFR-AVL-01); HPA scales any service independently from 2 to 10 replicas at CPU 70% (NFR-SCA-01), which provides the 10× headroom over the baseline (~1K DAU, ~100 orders/day); PostgreSQL instances are separate StatefulSets so a busy database never neighbors a failing one; redis caching and stateless service design keep catalog reads within the p95 targets of <300 ms cached and <800 ms uncached (NFR-PER-01); secrets (DB credentials, Moamalat HMAC key, JWT keys) live in Kubernetes Secrets, never in images.
 
 ## 7.5 Use Case View
 

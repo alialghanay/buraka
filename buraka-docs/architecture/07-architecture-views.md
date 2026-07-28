@@ -129,7 +129,7 @@ flowchart TB
     au & or_ --> smtp
 ```
 
-Key physical decisions: every service runs ≥2 replicas behind a Kubernetes Service (NFR-AVL-01); HPA scales any service independently to 10 replicas (NFR-SCA-01); PostgreSQL instances are separate StatefulSets so a busy database never neighbors a failing one; secrets (DB credentials, Moamalat HMAC key, JWT keys) live in Kubernetes Secrets, never in images.
+Key physical decisions: every service runs ≥2 replicas behind a Kubernetes Service, supporting the 99.5% availability target (NFR-AVL-01); HPA scales any service independently from 2 to 10 replicas at CPU 70% (NFR-SCA-01), which provides the 10× headroom over the baseline (~1K DAU, ~100 orders/day); PostgreSQL instances are separate StatefulSets so a busy database never neighbors a failing one; redis caching and stateless service design keep catalog reads within the p95 targets of <300 ms cached and <800 ms uncached (NFR-PER-01); secrets (DB credentials, Moamalat HMAC key, JWT keys) live in Kubernetes Secrets, never in images.
 
 ## 7.5 Use Case View
 
