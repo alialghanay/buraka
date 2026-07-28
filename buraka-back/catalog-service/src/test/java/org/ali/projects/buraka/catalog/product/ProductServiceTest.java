@@ -1,0 +1,81 @@
+package org.ali.projects.buraka.catalog.product;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import java.time.Duration;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+
+@ExtendWith(MockitoExtension.class)
+class ProductServiceTest {
+
+    @Mock
+    private ProductRepository productRepository;
+
+    @Mock
+    private RedisTemplate<String, Product> redisTemplate;
+
+    @Mock
+    private ValueOperations<String, Product> valueOperations;
+
+    private ProductService service;
+
+    private static Product sampleProduct() {
+        return new Product("product-1", "Product 1", "desc", 100, 1000L,
+                "black", "img", 1L, 1L);
+    }
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    }
+
+    @Test
+    void getBySlugCacheMissLoadsFromDbAndCaches() {
+        service = new ProductService(productRepository, redisTemplate, true);
+        Product product = sampleProduct();
+        when(valueOperations.get("product:slug:product-1")).thenReturn(null);
+        when(productRepository.findBySlug("product-1")).thenReturn(Optional.of(product));
+
+        Optional<Product> result = service.getBySlug("product-1");
+
+        assertThat(result).contains(product);
+        verify(valueOperations).set(eq("product:slug:product-1"), eq(product), eq(Duration.ofSeconds(60)));
+    }
+
+    @Test
+    void getBySlugCacheHitSkipsDb() {
+        service = new ProductService(productRepository, redisTemplate, true);
+        Product product = sampleProduct();
+        when(valueOperations.get("product:slug:product-1")).thenReturn(product);
+
+        Optional<Product> result = service.getBySlug("product-1");
+
+        assertThat(result).contains(product);
+        verifyNoInteractions(productRepository);
+    }
+
+    @Test
+    void getBySlugCacheDisabledGoesStraightToDb() {
+        service = new ProductService(productRepository, redisTemplate, false);
+        Product product = sampleProduct();
+        when(productRepository.findBySlug("product-1")).thenReturn(Optional.of(product));
+
+        Optional<Product> result = service.getBySlug("product-1");
+
+        assertThat(result).contains(product);
+        verifyNoInteractions(redisTemplate);
+    }
+}
