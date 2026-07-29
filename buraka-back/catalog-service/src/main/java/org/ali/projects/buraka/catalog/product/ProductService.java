@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProductService {
@@ -45,6 +46,7 @@ public class ProductService {
         return product;
     }
 
+    @Transactional
     public void applyReviewCreated(long productId, int rating) {
         productRepository.findById(productId).ifPresent(product -> {
             double total = product.getRatingsAverage() * product.getRatingsQuantity() + rating;
@@ -56,6 +58,7 @@ public class ProductService {
         });
     }
 
+    @Transactional
     public void applyReviewDeleted(long productId, int rating) {
         productRepository.findById(productId).ifPresent(product -> {
             int count = product.getRatingsQuantity();

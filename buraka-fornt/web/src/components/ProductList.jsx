@@ -4,7 +4,7 @@ import { fetchProducts, fetchCategories } from '../api'
 export default function ProductList({ onSelect }) {
   const [page, setPage] = useState(0)
   const [categoryId, setCategoryId] = useState('')
-  const [data, setData] = useState({ content: [], totalElements: 0 })
+  const [data, setData] = useState({ content: [], totalElements: 0, last: true })
   const [categories, setCategories] = useState([])
   const [error, setError] = useState(null)
 
@@ -41,7 +41,7 @@ export default function ProductList({ onSelect }) {
       <div style={{ marginTop: 12 }}>
         <button disabled={page === 0} onClick={() => setPage(page - 1)}>Prev</button>
         <span style={{ margin: '0 8px' }}>Page {page + 1}</span>
-        <button disabled={data.content.length < 12} onClick={() => setPage(page + 1)}>Next</button>
+        <button disabled={data.last} onClick={() => setPage(page + 1)}>Next</button>
       </div>
     </div>
   )

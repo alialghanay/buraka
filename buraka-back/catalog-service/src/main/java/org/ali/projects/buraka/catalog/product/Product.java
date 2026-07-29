@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "products")
@@ -14,6 +15,9 @@ public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long productId;
+
+    @Version
+    private Long version;
 
     @Column(nullable = false, unique = true)
     private String slug;
@@ -70,6 +74,10 @@ public class Product {
 
     public Long getProductId() {
         return productId;
+    }
+
+    public Long getVersion() {
+        return version;
     }
 
     public String getSlug() {
