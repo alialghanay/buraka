@@ -76,10 +76,6 @@ public class Product {
         return productId;
     }
 
-    public Long getVersion() {
-        return version;
-    }
-
     public String getSlug() {
         return slug;
     }
