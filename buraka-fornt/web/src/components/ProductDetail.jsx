@@ -8,18 +8,18 @@ export default function ProductDetail({ slug, onBack }) {
   const [error, setError] = useState(null)
 
   const reload = useCallback(() => {
-    fetchProduct(slug).then(setProduct).catch((e) => setError(e.message))
-    if (product) {
-      fetchReviews(product.productId).then(setReviews).catch(() => {})
-    }
-  }, [slug, product?.productId])
+    fetchProduct(slug)
+      .then((p) => {
+        setProduct(p)
+        return fetchReviews(p.productId)
+      })
+      .then(setReviews)
+      .catch((e) => setError(e.message))
+  }, [slug])
 
   useEffect(() => {
-    fetchProduct(slug).then((p) => {
-      setProduct(p)
-      fetchReviews(p.productId).then(setReviews).catch(() => {})
-    }).catch((e) => setError(e.message))
-  }, [slug])
+    reload()
+  }, [reload])
 
   if (error) return <p>Error: {error}</p>
   if (!product) return <p>Loading…</p>
