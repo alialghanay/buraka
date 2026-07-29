@@ -31,10 +31,6 @@ public class DataSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (productRepository.count() > 0) {
-            return;
-        }
-
         List<Brand> brands = seedBrands();
         List<Category> categories = seedCategories();
         seedProducts(brands, categories);
