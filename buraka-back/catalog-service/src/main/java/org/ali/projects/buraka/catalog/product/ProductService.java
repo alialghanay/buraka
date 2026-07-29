@@ -87,8 +87,13 @@ public class ProductService {
     }
 
     public void evict(String slug) {
-        if (cacheEnabled) {
+        if (!cacheEnabled) {
+            return;
+        }
+        try {
             redisTemplate.delete(key(slug));
+        } catch (RuntimeException e) {
+            log.warn("Failed to evict cache for product slug '{}', will rely on TTL", slug, e);
         }
     }
 
