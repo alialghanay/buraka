@@ -11,100 +11,155 @@ Buraka is an academic software-architecture course project for an e-commerce-sty
 - `REVIEW`
 - `BRAND`, `PRODUCT`, `CATEGORY` (with parent/child categories)
 
-As of today only the backend skeleton exists under `buraka-back/Buraka`. The frontend directory (`buraka-fornt/`) is empty and there is no client-side code or configuration.
+The repository contains:
+
+- The original backend scaffold under `buraka-back/Buraka/`.
+- A working **prototype** under `buraka-back/catalog-service/` and `buraka-back/review-service/` with React and Flutter frontends. The prototype is described in detail in the "Prototype" section at the bottom of this file.
 
 ## Repository Layout
 
 ```
 buraka/
 ├── buraka-back/
-│   └── Buraka/              # Gradle-based Spring Boot application
-│       ├── build.gradle
-│       ├── settings.gradle
-│       ├── gradlew / gradlew.bat
-│       ├── gradle/wrapper/
-│       ├── HELP.md
-│       ├── .gitignore
-│       └── src/
-│           ├── main/java/org/ali/projects/buraka/
-│           │   └── BurakaApplication.java
-│           ├── main/resources/
-│           │   └── application.properties
-│           └── test/java/org/ali/projects/buraka/
-│               └── BurakaApplicationTests.java
+│   ├── Buraka/              # Original Gradle-based Spring Boot scaffold
+│   ├── catalog-service/     # Prototype catalog service (Spring Boot 4.1)
+│   ├── review-service/      # Prototype review service (Spring Boot 4.1)
+│   ├── docker-compose.yml   # Prototype infrastructure (postgres×2, redis, rabbitmq)
+│   ├── docker-compose.scale.yml  # Catalog behind NGINX LB for scale tests
+│   ├── nginx/lb.conf        # NGINX load-balancer config
+│   ├── smoke-test.sh        # End-to-end event-flow smoke test
+│   └── loadtest/            # k6 scalability experiments
+├── buraka-fornt/
+│   ├── web/                 # React (Vite) storefront
+│   └── mobile/              # Flutter storefront
 ├── buraka-docs/
 │   ├── ERD/README.md        # Entity-relationship diagrams in Mermaid
-│   └── Software Architecture Course Project.pdf
-└── buraka-fornt/            # Empty placeholder directory
+│   ├── architecture/        # Architecture documentation
+│   └── project-requirements/# Project requirements (README.md + PDF)
+└── AGENTS.md                # This file
 ```
 
 ## Technology Stack
 
-- **Language:** Java 17 (configured in `build.gradle` toolchain)
+- **Language:** Java 25 for the prototype services; the original `buraka-back/Buraka/` scaffold is still configured for Java 17.
 - **Build Tool:** Gradle 9.5.1 via wrapper (`gradlew`)
 - **Framework:** Spring Boot 4.1.0
   - Spring Framework 7.0.8
   - Spring MVC / Servlet stack (`spring-boot-starter-webmvc`)
   - Embedded Tomcat 11.0.22
-  - Jackson for JSON
-- **Testing:** JUnit 5 (JUnit Platform) + AssertJ
-- **Other:** Jakarta Annotations 3.0.0, Micrometer observation, jSpecify annotations
+  - Jackson 3 for JSON
+- **Data:** PostgreSQL 16, Spring Data JPA, Redis 7 (cache-aside)
+- **Messaging:** RabbitMQ 3.13 (`JacksonJsonMessageConverter` with trusted package)
+- **Frontends:** React (Vite), Flutter 3.44.5
+- **Load Testing:** k6 (via `grafana/k6` Docker image)
+- **Testing:** JUnit 5 + AssertJ + Mockito; `@WebMvcTest` slices; vitest; Flutter tests
 
 ## Build, Run and Test Commands
 
-All commands should be run from `buraka-back/Buraka/`.
+### Backend services
+
+Run from the service directory (`buraka-back/catalog-service/` or `buraka-back/review-service/`):
 
 | Command | Purpose |
 |---|---|
-| `./gradlew build` | Compile, run tests, and package the application |
-| `./gradlew test` | Run the test suite |
-| `./gradlew bootRun` | Run the application with the embedded Tomcat server |
+| `./gradlew build` | Compile, run tests, and package the service |
+| `./gradlew test` | Run the service test suite |
+| `./gradlew bootRun` | Run the service locally with embedded Tomcat |
 | `./gradlew bootJar` | Build the executable Spring Boot JAR |
-| `./gradlew bootBuildImage` | Build an OCI image using the Spring Boot Gradle plugin |
-| `./gradlew dependencies --configuration runtimeClasspath` | Inspect resolved runtime dependencies |
 
-The build was verified with `./gradlew test` on the current checkout.
+### Infrastructure and end-to-end smoke test
+
+From the repository root:
+
+```bash
+# Start PostgreSQL, Redis, and RabbitMQ
+docker compose -f buraka-back/docker-compose.yml up -d
+
+# Run the end-to-end smoke test (requires catalog-service on :8081 and review-service on :8082)
+./buraka-back/smoke-test.sh
+```
+
+### Scaled catalog load test
+
+```bash
+# Build the catalog Docker image
+docker compose -f buraka-back/docker-compose.yml -f buraka-back/docker-compose.scale.yml build
+
+# Run with 1 replica and cache enabled (see loadtest README for cache-off/3-replica variants)
+CACHE_ENABLED=true docker compose -f buraka-back/docker-compose.yml -f buraka-back/docker-compose.scale.yml up -d --scale catalog-service=1
+
+# Run k6
+docker run --rm -i -e BASE_URL=http://host.docker.internal:8080 grafana/k6 run - < buraka-back/loadtest/catalog-read.js
+```
+
+### Frontends
+
+```bash
+# React web app
+cd buraka-fornt/web
+npm install
+npm run build
+npx vitest run
+npm run dev          # dev server on http://localhost:5173
+
+# Flutter mobile app
+cd buraka-fornt/mobile
+flutter pub get
+flutter test
+flutter run -d macos # or -d chrome
+```
 
 ## Code Organization
 
-- **Base package:** `org.ali.projects.buraka`
-- **Entry point:** `BurakaApplication.java` (`@SpringBootApplication`)
-- **Configuration:** `src/main/resources/application.properties` currently only sets `spring.application.name=Buraka`
-- **Domain / controllers / services / repositories:** None exist yet. The project is a bare Spring Boot scaffold. Add new packages under `org.ali.projects.buraka` following Java conventions (e.g., `...buraka.controller`, `...buraka.service`, `...buraka.repository`, `...buraka.entity`).
+- **Base packages:**
+  - `org.ali.projects.buraka.catalog` for `catalog-service`
+  - `org.ali.projects.buraka.review` for `review-service`
+- Each service follows package-by-feature conventions:
+  - `...catalog.product`, `...catalog.category`, `...catalog.brand`, `...catalog.config`, `...catalog.messaging`
+  - `...review.review`, `...review.config`, `...review.messaging`
+- The shared event contract `org.ali.projects.buraka.shared.messaging.ReviewEvent` is duplicated into both services with the identical fully-qualified name so RabbitMQ JSON type headers resolve across services. Keep both copies in sync.
 
 ## Development Conventions
 
 - Standard Maven/Gradle source layout (`src/main/java`, `src/test/java`, `src/main/resources`).
 - Package names use the group id `org.ali.projects.buraka`.
-- `.gitignore` ignores Gradle build outputs, IDE files (IntelliJ IDEA, VS Code, STS, NetBeans), and `.gradle`.
+- `.gitignore` ignores Gradle build outputs, IDE files, and `.gradle`.
 - `HELP.md` is auto-generated Spring Boot reference documentation; do not treat it as project-specific instructions.
 - Documentation language in the project is English.
 
 ## Testing Instructions
 
-- Tests use JUnit 5 with the JUnit Platform (`useJUnitPlatform()` in `build.gradle`).
-- The only existing test is `BurakaApplicationTests.contextLoads()`, which currently contains a trivial AssertJ assertion (`assertThat(42).isEqualTo(42)`) to verify that the Spring context loads.
-- Add real unit and integration tests under `src/test/java/org/ali/projects/buraka/` mirroring the main package structure.
+- Backend services use JUnit 5 with the JUnit Platform (`useJUnitPlatform()` in `build.gradle`).
+- Use `@WebMvcTest` + `@MockitoBean` for controller slices and Mockito for service unit tests.
+- Do **not** add `@SpringBootTest` or Testcontainers to the prototype services; keep the suite fast and infra-free.
+- Frontend tests:
+  - Web: `cd buraka-fornt/web && npx vitest run`
+  - Mobile: `cd buraka-fornt/mobile && flutter test`
 
 ## Deployment Notes
 
-- No Dockerfile, `docker-compose.yml`, CI/CD workflows, or cloud manifests are present.
-- The deployable artifact is the Spring Boot executable JAR produced by `./gradlew bootJar`.
-- An OCI image can be produced with `./gradlew bootBuildImage` if a builder/Pack environment is available.
-- Default port and runtime profile behavior are not configured; Spring Boot will use its defaults (port `8080`) unless overridden in `application.properties` or via command-line arguments.
+- The original scaffold deployable artifact is the Spring Boot executable JAR produced by `./gradlew bootJar` inside `buraka-back/Buraka/`.
+- The prototype uses Docker Compose for local deployment:
+  - `buraka-back/docker-compose.yml` — infrastructure only.
+  - `buraka-back/docker-compose.scale.yml` + `nginx/lb.conf` — catalog service behind NGINX for scaling experiments.
+- `buraka-back/catalog-service/Dockerfile` builds the catalog JAR inside a multi-stage image.
+- No CI/CD workflows or cloud manifests are present.
 
 ## Security Considerations
 
-- The application currently has **no authentication or authorization** implemented, even though the ERD defines password and password-reset fields on `USER`.
-- `application.properties` contains no secrets, database credentials, or tokens.
-- If you implement user management, do **not** store plaintext passwords; use Spring Security with a strong password encoder, keep reset codes short-lived and hashed, and externalize secrets to environment variables or a secrets manager.
-- There is no input validation layer yet; add Bean Validation and proper DTOs before exposing endpoints.
+- The prototype has **no authentication or authorization**. Users are identified by an `X-User-Id` request header (default `1` in the frontends).
+- CORS is configured as `allowedOrigins("*")` on `/api/**` for local frontend development — this is intentional for the prototype but must be narrowed for any real deployment.
+- Database credentials (`buraka/buraka`) are committed in plain text in `application.properties` and Docker Compose files. This is acceptable only for local prototype use.
+- If you implement real user management, do **not** store plaintext passwords; use Spring Security with a strong password encoder, keep reset codes short-lived and hashed, and externalize secrets to environment variables or a secrets manager.
+- There is no input validation layer beyond the prototype's DTO annotations; add Bean Validation and proper DTOs before exposing endpoints to untrusted clients.
 
 ## Useful References
 
 - `buraka-docs/ERD/README.md` — domain model and relationships
-- `buraka-back/Buraka/build.gradle` — dependencies and build configuration
-- `buraka-back/Buraka/HELP.md` — generic Spring Boot/Gradle links
+- `buraka-docs/project-requirements/README.md` — project requirements
+- `buraka-docs/architecture/` — architecture documentation
+- `buraka-back/Buraka/build.gradle` — original scaffold dependencies
+- `docs/superpowers/plans/2026-07-28-buraka-prototype.md` — prototype implementation plan
 
 ## Prototype (added 2026-07-28)
 
