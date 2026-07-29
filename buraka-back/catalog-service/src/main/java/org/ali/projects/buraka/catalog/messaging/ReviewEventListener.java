@@ -16,10 +16,10 @@ public class ReviewEventListener {
 
     @RabbitListener(queues = RabbitConfig.QUEUE)
     public void onReviewEvent(ReviewEvent event) {
-        if (event.type() == ReviewEvent.Type.CREATED) {
-            productService.applyReviewCreated(event.productId(), event.rating());
-        } else {
-            productService.applyReviewDeleted(event.productId(), event.rating());
+        switch (event.type()) {
+            case CREATED -> productService.applyReviewCreated(event.productId(), event.rating());
+            case DELETED -> productService.applyReviewDeleted(event.productId(), event.rating());
+            default -> throw new IllegalArgumentException("Unknown review event type: " + event.type());
         }
     }
 }
