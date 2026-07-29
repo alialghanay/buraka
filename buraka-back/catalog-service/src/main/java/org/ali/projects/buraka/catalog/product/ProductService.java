@@ -2,7 +2,6 @@ package org.ali.projects.buraka.catalog.product;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +21,6 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final RedisTemplate<String, Product> redisTemplate;
     private final boolean cacheEnabled;
-    private final ConcurrentHashMap<Long, Object> productLocks = new ConcurrentHashMap<>();
 
     public ProductService(ProductRepository productRepository,
                           RedisTemplate<String, Product> redisTemplate,
@@ -53,47 +51,39 @@ public class ProductService {
 
     @Transactional
     public void applyReviewCreated(long productId, int rating) {
-        synchronized (lockFor(productId)) {
-            Optional<Product> optional = productRepository.findById(productId);
-            if (optional.isEmpty()) {
-                log.warn("Product {} not found, cannot apply review created", productId);
-                return;
-            }
-            Product product = optional.get();
-            double total = product.getRatingsAverage() * product.getRatingsQuantity() + rating;
-            int count = product.getRatingsQuantity() + 1;
-            product.setRatingsAverage(total / count);
-            product.setRatingsQuantity(count);
-            productRepository.save(product);
-            evict(product.getSlug());
+        Optional<Product> optional = productRepository.findByIdForUpdate(productId);
+        if (optional.isEmpty()) {
+            log.warn("Product {} not found, cannot apply review created", productId);
+            return;
         }
+        Product product = optional.get();
+        double total = product.getRatingsAverage() * product.getRatingsQuantity() + rating;
+        int count = product.getRatingsQuantity() + 1;
+        product.setRatingsAverage(total / count);
+        product.setRatingsQuantity(count);
+        productRepository.save(product);
+        evict(product.getSlug());
     }
 
     @Transactional
     public void applyReviewDeleted(long productId, int rating) {
-        synchronized (lockFor(productId)) {
-            Optional<Product> optional = productRepository.findById(productId);
-            if (optional.isEmpty()) {
-                log.warn("Product {} not found, cannot apply review deleted", productId);
-                return;
-            }
-            Product product = optional.get();
-            int count = product.getRatingsQuantity();
-            if (count <= 1) {
-                product.setRatingsAverage(0.0);
-                product.setRatingsQuantity(0);
-            } else {
-                double total = product.getRatingsAverage() * count - rating;
-                product.setRatingsQuantity(count - 1);
-                product.setRatingsAverage(total / (count - 1));
-            }
-            productRepository.save(product);
-            evict(product.getSlug());
+        Optional<Product> optional = productRepository.findByIdForUpdate(productId);
+        if (optional.isEmpty()) {
+            log.warn("Product {} not found, cannot apply review deleted", productId);
+            return;
         }
-    }
-
-    private Object lockFor(long productId) {
-        return productLocks.computeIfAbsent(productId, k -> new Object());
+        Product product = optional.get();
+        int count = product.getRatingsQuantity();
+        if (count <= 1) {
+            product.setRatingsAverage(0.0);
+            product.setRatingsQuantity(0);
+        } else {
+            double total = product.getRatingsAverage() * count - rating;
+            product.setRatingsQuantity(count - 1);
+            product.setRatingsAverage(total / (count - 1));
+        }
+        productRepository.save(product);
+        evict(product.getSlug());
     }
 
     public void evict(String slug) {

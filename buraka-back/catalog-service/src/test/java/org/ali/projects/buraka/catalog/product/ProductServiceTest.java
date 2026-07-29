@@ -85,7 +85,7 @@ class ProductServiceTest {
         Product product = sampleProduct();
         product.setRatingsAverage(4.0);
         product.setRatingsQuantity(2);
-        when(productRepository.findById(10L)).thenReturn(java.util.Optional.of(product));
+        when(productRepository.findByIdForUpdate(10L)).thenReturn(java.util.Optional.of(product));
 
         service.applyReviewCreated(10L, 5);
 
@@ -101,7 +101,7 @@ class ProductServiceTest {
         Product product = sampleProduct();
         product.setRatingsAverage(4.0);
         product.setRatingsQuantity(2);
-        when(productRepository.findById(10L)).thenReturn(java.util.Optional.of(product));
+        when(productRepository.findByIdForUpdate(10L)).thenReturn(java.util.Optional.of(product));
 
         service.applyReviewDeleted(10L, 3);
 
@@ -116,7 +116,7 @@ class ProductServiceTest {
         Product product = sampleProduct();
         product.setRatingsAverage(5.0);
         product.setRatingsQuantity(1);
-        when(productRepository.findById(10L)).thenReturn(java.util.Optional.of(product));
+        when(productRepository.findByIdForUpdate(10L)).thenReturn(java.util.Optional.of(product));
 
         service.applyReviewDeleted(10L, 5);
 
