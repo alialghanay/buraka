@@ -25,6 +25,9 @@ public class ReviewService {
     }
 
     public Review create(long userId, CreateReviewRequest request) {
+        if (reviewRepository.findByUserIdAndProductId(userId, request.productId()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "already reviewed this product");
+        }
         Review review = new Review(userId, request.productId(), request.title(),
                 request.rating(), LocalDateTime.now());
         Review saved = reviewRepository.save(review);

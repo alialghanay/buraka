@@ -41,6 +41,7 @@ class ReviewServiceTest {
     @Test
     void createPersistsAndPublishesCreatedEvent() {
         CreateReviewRequest request = new CreateReviewRequest(10L, "Great", 5);
+        when(reviewRepository.findByUserIdAndProductId(7L, 10L)).thenReturn(Optional.empty());
         when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> {
             Review r = invocation.getArgument(0);
             r.setReviewId(1L);
@@ -55,6 +56,22 @@ class ReviewServiceTest {
                         && event.reviewId() == 1L
                         && event.productId() == 10L
                         && event.rating() == 5));
+    }
+
+    @Test
+    void createRejectsDuplicateReviewForSameProduct() {
+        CreateReviewRequest request = new CreateReviewRequest(10L, "Great", 5);
+        Review existing = new Review(7L, 10L, "Okay", 3, LocalDateTime.now());
+        existing.setReviewId(2L);
+        when(reviewRepository.findByUserIdAndProductId(7L, 10L)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.create(7L, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+
+        verify(reviewRepository, never()).save(any(Review.class));
+        verifyNoInteractions(eventPublisher);
     }
 
     @Test
