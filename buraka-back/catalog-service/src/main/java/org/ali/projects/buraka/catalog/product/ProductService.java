@@ -2,7 +2,7 @@ package org.ali.projects.buraka.catalog.product;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.function.Consumer;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +18,11 @@ public class ProductService {
 
     private static final Logger log = LoggerFactory.getLogger(ProductService.class);
     private static final Duration CACHE_TTL = Duration.ofSeconds(60);
-    private static final int MAX_OPTIMISTIC_LOCK_RETRIES = 3;
 
     private final ProductRepository productRepository;
     private final RedisTemplate<String, Product> redisTemplate;
     private final boolean cacheEnabled;
+    private final ConcurrentHashMap<Long, Object> productLocks = new ConcurrentHashMap<>();
 
     public ProductService(ProductRepository productRepository,
                           RedisTemplate<String, Product> redisTemplate,
@@ -54,17 +53,31 @@ public class ProductService {
 
     @Transactional
     public void applyReviewCreated(long productId, int rating) {
-        updateWithRetry(productId, product -> {
+        synchronized (lockFor(productId)) {
+            Optional<Product> optional = productRepository.findById(productId);
+            if (optional.isEmpty()) {
+                log.warn("Product {} not found, cannot apply review created", productId);
+                return;
+            }
+            Product product = optional.get();
             double total = product.getRatingsAverage() * product.getRatingsQuantity() + rating;
             int count = product.getRatingsQuantity() + 1;
             product.setRatingsAverage(total / count);
             product.setRatingsQuantity(count);
-        });
+            productRepository.save(product);
+            evict(product.getSlug());
+        }
     }
 
     @Transactional
     public void applyReviewDeleted(long productId, int rating) {
-        updateWithRetry(productId, product -> {
+        synchronized (lockFor(productId)) {
+            Optional<Product> optional = productRepository.findById(productId);
+            if (optional.isEmpty()) {
+                log.warn("Product {} not found, cannot apply review deleted", productId);
+                return;
+            }
+            Product product = optional.get();
             int count = product.getRatingsQuantity();
             if (count <= 1) {
                 product.setRatingsAverage(0.0);
@@ -74,29 +87,13 @@ public class ProductService {
                 product.setRatingsQuantity(count - 1);
                 product.setRatingsAverage(total / (count - 1));
             }
-        });
+            productRepository.save(product);
+            evict(product.getSlug());
+        }
     }
 
-    private void updateWithRetry(long productId, Consumer<Product> updater) {
-        for (int attempt = 1; attempt <= MAX_OPTIMISTIC_LOCK_RETRIES; attempt++) {
-            try {
-                Optional<Product> optional = productRepository.findById(productId);
-                if (optional.isEmpty()) {
-                    return;
-                }
-                Product product = optional.get();
-                updater.accept(product);
-                productRepository.save(product);
-                evict(product.getSlug());
-                return;
-            } catch (ObjectOptimisticLockingFailureException ex) {
-                if (attempt == MAX_OPTIMISTIC_LOCK_RETRIES) {
-                    log.warn("Failed to update product {} rating after {} attempts due to optimistic lock conflict",
-                            productId, MAX_OPTIMISTIC_LOCK_RETRIES, ex);
-                    return;
-                }
-            }
-        }
+    private Object lockFor(long productId) {
+        return productLocks.computeIfAbsent(productId, k -> new Object());
     }
 
     public void evict(String slug) {
