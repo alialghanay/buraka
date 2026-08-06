@@ -2,7 +2,7 @@
 
 Buraka is an Online Shopping System for the Libyan market. This document describes its complete software architecture: requirements, microservice decomposition, diagrams, 4+1 views, quality attributes, and technology stack.
 
-This document is a design deliverable only — no implementation is included.
+A working prototype implementation now exists alongside this architecture document and is available on GitHub: **https://github.com/alialghanay/buraka**
 
 ## Contents
 

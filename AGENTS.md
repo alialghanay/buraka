@@ -155,6 +155,7 @@ flutter run -d macos # or -d chrome
 
 ## Useful References
 
+- GitHub repository: https://github.com/alialghanay/buraka
 - `buraka-docs/ERD/README.md` — domain model and relationships
 - `buraka-docs/project-requirements/README.md` — project requirements
 - `buraka-docs/architecture/` — architecture documentation
